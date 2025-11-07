@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    
+
+  </head>
+    
+  <body>
+  <!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>2-Column Collage (Auto JPEG Compress ≤150KB)</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:18px;background:#0f172a;color:#e6eef8}
+    .card{background:#0b1220;border-radius:10px;padding:18px;box-shadow:0 6px 22px rgba(2,6,23,.6)}
+    h1{font-size:18px;margin:0 0 8px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    input[type=file]{background:#0b1220;color:inherit;padding:8px;border-radius:8px}
+    button{padding:8px 12px;border-radius:8px;border:0;background:#2563eb;color:white;cursor:pointer}
+    button.secondary{background:#334155}
+    #preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;max-height:360px;overflow:auto;padding:8px;background:#071024;border-radius:8px}
+    .thumb{background:#07142a;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.04)}
+    .thumb img{display:block;max-width:220px;height:auto}
+    label.small{font-size:13px;color:#9fb0d6}
+    #downloadLink{display:inline-block;margin-left:6px}
+    .note{margin-top:10px;color:#9fb0d6;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>2-Column Collage — Auto JPEG Compress (≤150 KB)</h1>
+    <div class="controls">
+      <input id="files" type="file" accept="image/*" multiple />
+      <button id="createBtn">Create Collage</button>
+      <button id="clearBtn" class="secondary">Clear</button>
+      <label class="small">Padding (px): <input id="pad" type="number" value="8" style="width:60px;margin-left:6px;padding:4px;border-radius:6px"></label>
+    </div><div id="preview"></div>
+<div class="note">Each row has exactly 2 photos. Final download will be compressed automatically under 150 KB as JPEG.</div>
+<div style="margin-top:12px">
+  <canvas id="collageCanvas" style="display:block;border:1px solid rgba(255,255,255,.04);margin-top:12px;max-width:100%"></canvas>
+  <a id="downloadLink" download="collage.jpg" style="display:none">Download Collage (JPEG)</a>
+</div>
+
+  </div><script>
+  const filesEl = document.getElementById('files');
+  const preview = document.getElementById('preview');
+  const createBtn = document.getElementById('createBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const canvas = document.getElementById('collageCanvas');
+  const dl = document.getElementById('downloadLink');
+  const padInput = document.getElementById('pad');
+
+  let images = [];
+
+  filesEl.addEventListener('change', async (e)=>{
+    preview.innerHTML = '';
+    images = [];
+    const list = Array.from(e.target.files || []);
+    if(list.length===0) return;
+
+    for(const file of list){
+      if(!file.type.startsWith('image/')) continue;
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.src = url;
+      await img.decode().catch(()=>{});
+      images.push({file, img, w: img.naturalWidth, h: img.naturalHeight});
+
+      const box = document.createElement('div'); box.className='thumb';
+      const im = document.createElement('img'); im.src = url; im.alt = file.name;
+      const meta = document.createElement('div'); meta.style.fontSize='12px'; meta.style.color='#9fb0d6'; meta.style.marginTop='6px';
+      meta.textContent = file.name + ' — ' + img.naturalWidth + '×' + img.naturalHeight;
+      box.appendChild(im); box.appendChild(meta);
+      preview.appendChild(box);
+    }
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    filesEl.value=''; preview.innerHTML=''; images=[]; canvas.width=canvas.height=0; dl.style.display='none';
+  });
+
+  createBtn.addEventListener('click', ()=>{
+    if(images.length===0){ alert('Please select images first'); return; }
+    const padding = Number(padInput.value) || 0;
+
+    const rows = [];
+    for(let i=0;i<images.length;i+=2){
+      rows.push(images.slice(i,i+2));
+    }
+
+    let canvasWidth = 0;
+    let totalHeight = 0;
+
+    for(const row of rows){
+      const rowWidth = row.reduce((sum,it)=> sum + it.w, 0) + (row.length - 1) * padding;
+      const rowHeight = Math.max(...row.map(it=>it.h));
+      canvasWidth = Math.max(canvasWidth, rowWidth);
+      totalHeight += rowHeight + padding;
+    }
+    totalHeight -= padding;
+
+    canvas.width = canvasWidth;
+    canvas.height = totalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    let y = 0;
+    for(const row of rows){
+      let x = 0;
+      const rowHeight = Math.max(...row.map(it=>it.h));
+      for(const it of row){
+        ctx.drawImage(it.img, x, y, it.w, it.h);
+        x += it.w + padding;
+      }
+      y += rowHeight + padding;
+    }
+
+    // Compress to under 150KB automatically
+    let quality = 0.8;
+    let jpegData = canvas.toDataURL('image/jpeg', quality);
+    while(jpegData.length/1024 > 150 && quality > 0.2){
+      quality -= 0.05;
+      jpegData = canvas.toDataURL('image/jpeg', quality);
+    }
+
+    dl.href = jpegData;
+    dl.download = 'collage.jpg';
+    dl.style.display = 'inline-block';
+    dl.textContent = 'Download Collage (≈' + Math.round(jpegData.length/1024) + ' KB, quality=' + quality.toFixed(2) + ')';
+  });
+</script></body>
+</html>
+    
+  </body>
+  
+</html>
